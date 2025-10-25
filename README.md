@@ -1,6 +1,4 @@
-# Combined Marketplace App
-
-A unified marketplace application that combines the functionality of both the Binder swipe interface and the Buynder chat system.
+# Binder.
 
 ## Features
 
