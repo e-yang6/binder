@@ -51,3 +51,4 @@ A unified marketplace application that combines the functionality of both the Bi
 
 The combined app provides a complete marketplace experience from discovery to negotiation.
 "# binder" 
+"# binder" 
