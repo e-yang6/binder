@@ -120,6 +120,7 @@ interface SwipeModeProps {
 const SwipeMode: React.FC<SwipeModeProps> = ({ onAddToWatchlist, watchlist }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchInput, setSearchInput] = useState('');
+  const previousSearchQueryRef = useRef<string>('');
   const [allListings, setAllListings] = useState<Listing[]>([]);
   const [filteredListings, setFilteredListings] = useState<Listing[]>([]);
   const [fypListings, setFypListings] = useState<Listing[]>([]);
@@ -133,6 +134,9 @@ const SwipeMode: React.FC<SwipeModeProps> = ({ onAddToWatchlist, watchlist }) =>
   const [showDescription, setShowDescription] = useState(false);
   const [verticalDragOffset, setVerticalDragOffset] = useState(0);
   const [isVerticalDragging, setIsVerticalDragging] = useState(false);
+  const [isScraperRunning, setIsScraperRunning] = useState(false);
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const scraperAbortControllerRef = useRef<AbortController | null>(null);
 
   // Function to parse CSV data with proper handling of quoted fields
   const parseCSVData = (csvText: string): Listing[] => {
@@ -141,6 +145,8 @@ const SwipeMode: React.FC<SwipeModeProps> = ({ onAddToWatchlist, watchlist }) =>
 
     for (let i = 1; i < lines.length; i++) {
       const line = lines[i];
+      if (!line || line.trim() === '') continue; // Skip empty lines
+      
       const values: string[] = [];
       let current = '';
       let inQuotes = false;
@@ -158,23 +164,30 @@ const SwipeMode: React.FC<SwipeModeProps> = ({ onAddToWatchlist, watchlist }) =>
       }
       values.push(current.trim());
       
-      if (values.length >= 7) {
+      // Require at least 6 fields (ID, title, price, description, image_url, listing_url)
+      if (values.length >= 6) {
+        // Skip listings with "Error" as title
+        if (values[1] === 'Error') {
+          console.log('Skipping error listing:', values[0]);
+          continue;
+        }
+        
         console.log('Parsing values:', values);
         const listing: Listing = {
-          id: values[0],
-          title: values[1],
-          price: values[2],
-          description: values[3],
-          image_url: values[4],
-          listing_url: values[5],
-          condition: (values[6] || 'Used - Good') as 'Brand New' | 'Like New' | 'Used - Good' | 'Used - Fair' | 'Needs Repair', // Use condition from CSV
+          id: values[0] || `listing-${i}`,
+          title: values[1] || 'Untitled',
+          price: values[2] || '$0',
+          description: values[3] || '',
+          image_url: values[4] || '',
+          listing_url: values[5] || '#',
+          condition: (values[6] || 'Used - Good') as 'Brand New' | 'Like New' | 'Used - Good' | 'Used - Fair' | 'Needs Repair',
           quality: 'good', // Default quality
           // Add required fields with defaults
-          location: 'Downtown, Cityville', // Default location
+          location: 'Toronto, ON', // Default location
           seller_name: 'Seller', // Default seller
           posted_at: new Date().toISOString(),
           // Additional fields for compatibility
-          imgUrl: values[4],
+          imgUrl: values[4] || '',
           askingPrice: parseFloat(values[2].replace(/[^0-9.]/g, '')) || 0,
         };
         console.log('Created listing:', listing);
@@ -193,25 +206,33 @@ const SwipeMode: React.FC<SwipeModeProps> = ({ onAddToWatchlist, watchlist }) =>
     return shuffled;
   };
 
-  const loadFYPData = async () => {
+  const loadFYPData = useCallback(async () => {
     try {
-      const response = await fetch('/fyp.csv');
+      // Load from listings.csv for main page
+      const response = await fetch('/listings.csv');
       const csvText = await response.text();
       const listings = parseCSVData(csvText);
-      // Shuffle FYP listings for random order
+      // Shuffle listings for random order
       const shuffledListings = shuffleArray(listings);
-      setFypListings(shuffledListings);
+      
+      // Only update if the data has actually changed
+      setFypListings(prevListings => {
+        if (prevListings.length !== shuffledListings.length) {
+          return shuffledListings;
+        }
+        return shuffledListings;
+      });
     } catch (error) {
-      console.error('Error loading FYP data:', error);
+      console.error('Error loading listings data:', error);
     }
-  };
+  }, []);
 
   const checkAndCreateSearchCSV = useCallback(async (searchTerm: string) => {
     try {
       console.log(`[checkAndCreateSearchCSV] Starting check for: "${searchTerm}"`);
       
-      // First, try to load existing CSV file
-      const checkResponse = await fetch(`/search-results/${searchTerm}.csv`);
+      // First, try to load existing CSV file from public folder
+      const checkResponse = await fetch(`/${searchTerm}.csv`);
       console.log(`[checkAndCreateSearchCSV] Check response status: ${checkResponse.status}`);
       console.log(`[checkAndCreateSearchCSV] Content-Type: ${checkResponse.headers.get('content-type')}`);
       
@@ -251,7 +272,7 @@ const SwipeMode: React.FC<SwipeModeProps> = ({ onAddToWatchlist, watchlist }) =>
         console.log(`[checkAndCreateSearchCSV] Create response data:`, responseData);
         
         if (createResponse.ok) {
-          console.log(`Created search CSV file: ${searchTerm}.csv in search-results folder`);
+          console.log(`Created search CSV file: ${searchTerm}.csv in public folder`);
         } else {
           throw new Error(`Failed to create CSV file: ${responseData.error || 'Unknown error'}`);
         }
@@ -278,6 +299,26 @@ const SwipeMode: React.FC<SwipeModeProps> = ({ onAddToWatchlist, watchlist }) =>
     return searchCSVs;
   };
 
+  // Function to stop scraping
+  const stopScraping = useCallback(() => {
+    console.log('Stopping scraper...');
+    
+    // Clear polling interval
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
+    
+    // Abort ongoing fetch request
+    if (scraperAbortControllerRef.current) {
+      scraperAbortControllerRef.current.abort();
+      scraperAbortControllerRef.current = null;
+    }
+    
+    setIsScraperRunning(false);
+    console.log('Scraper stopped');
+  }, []);
+
   // Load CSV data on component mount
   useEffect(() => {
     const loadCSVData = async () => {
@@ -287,17 +328,34 @@ const SwipeMode: React.FC<SwipeModeProps> = ({ onAddToWatchlist, watchlist }) =>
         const listings = parseCSVData(csvText);
         console.log('Parsed listings:', listings);
         setAllListings(listings);
+        setFypListings(shuffleArray(listings)); // Also set main page data initially
         setIsLoading(false);
       } catch (error) {
         console.error('Error loading CSV data:', error);
         // Fallback to mock data if CSV fails
         setAllListings(MOCK_LISTINGS);
+        setFypListings(shuffleArray(MOCK_LISTINGS));
         setIsLoading(false);
       }
     };
 
     loadCSVData();
-  }, []);
+    
+    // Cleanup on unmount - stop scraping
+    return () => {
+      stopScraping();
+    };
+  }, [stopScraping]);
+
+  // Stop scraping when search query changes
+  useEffect(() => {
+    // If search query changed and it's different from previous, stop the current scraper
+    if (previousSearchQueryRef.current !== searchQuery && isScraperRunning) {
+      console.log('Search query changed, stopping current scraper...');
+      stopScraping();
+    }
+    previousSearchQueryRef.current = searchQuery;
+  }, [searchQuery, isScraperRunning, stopScraping]);
 
   // Check every 2 seconds if search is empty and load FYP data
   useEffect(() => {
@@ -308,15 +366,7 @@ const SwipeMode: React.FC<SwipeModeProps> = ({ onAddToWatchlist, watchlist }) =>
     }, 2000);
 
     return () => clearInterval(interval);
-  }, [searchQuery]);
-
-  // Filter states
-  const [filters, setFilters] = useState({
-    maxPrice: '',
-    minPrice: '',
-    condition: '',
-    showFilters: false
-  });
+  }, [searchQuery, loadFYPData]);
 
   // State for image gallery
   const [showImageGallery, setShowImageGallery] = useState(false);
@@ -332,10 +382,9 @@ const SwipeMode: React.FC<SwipeModeProps> = ({ onAddToWatchlist, watchlist }) =>
   const swipeThreshold = 150; // Pixels to register a swipe
   const verticalSwipeThreshold = 80; // Pixels to register a vertical swipe
 
-  // Effect to filter listings based on search query and filters
+  // Effect to filter listings based on search query
   useEffect(() => {
     const lowerCaseQuery = searchQuery.toLowerCase();
-    const userLocation = 'Downtown, Cityville'; // In real app, this would come from user profile
     
     // Use FYP data if search is empty, search-specific listings if search exists, otherwise all listings
     const sourceListings = !searchQuery ? fypListings : (searchListings.length > 0 ? searchListings : allListings);
@@ -352,45 +401,22 @@ const SwipeMode: React.FC<SwipeModeProps> = ({ onAddToWatchlist, watchlist }) =>
       
       if (!matchesSearch) return false;
       
-      // Price filters
-      const listingPrice = service.parsePrice(listing.price);
-      if (filters.minPrice && listingPrice && listingPrice.value < parseFloat(filters.minPrice)) return false;
-      if (filters.maxPrice && listingPrice && listingPrice.value > parseFloat(filters.maxPrice)) return false;
-      
-      // Condition filter
-      if (filters.condition && listing.condition !== filters.condition) return false;
-      
-      
       return true;
     });
     
     setFilteredListings(newFilteredListings);
 
-    // Only reset current listing if it's truly changed (not just a data refresh)
-    if (newFilteredListings.length > 0) {
-      // Check if current listing still exists in the new filtered list
-      if (currentListing) {
-        const currentIndex = newFilteredListings.findIndex(listing => listing.id === currentListing.id);
-        if (currentIndex !== -1) {
-          // Current listing still exists, just update the index if needed
-          setCurrentListingIndex(currentIndex);
-        } else {
-          // Current listing no longer in filtered list, go to first item
-          setCurrentListingIndex(0);
-          setCurrentListing(newFilteredListings[0]);
-        }
-      } else {
-        // No current listing, go to first item
-        setCurrentListingIndex(0);
-        setCurrentListing(newFilteredListings[0]);
-      }
-    } else {
+    // Only set current listing when filtered listings change
+    if (newFilteredListings.length > 0 && !currentListing) {
+      setCurrentListingIndex(0);
+      setCurrentListing(newFilteredListings[0]);
+    } else if (newFilteredListings.length === 0) {
       setCurrentListingIndex(0);
       setCurrentListing(null);
       setAiResponse(null);
       setIsAiProcessing(false);
     }
-  }, [searchQuery, filters, watchlist, allListings, fypListings, searchListings, currentListing]);
+  }, [searchQuery, watchlist, allListings, fypListings, searchListings]);
 
   const processListingForAI = useCallback(async (listing: Listing, prefs: UserPrefs) => {
     setIsAiProcessing(true);
@@ -610,8 +636,74 @@ const SwipeMode: React.FC<SwipeModeProps> = ({ onAddToWatchlist, watchlist }) =>
                 if (e.key === 'Enter') {
                   setSearchQuery(searchInput);
                   if (searchInput.trim()) {
-                    const listings = await checkAndCreateSearchCSV(searchInput.trim());
-                    setSearchListings(listings);
+                    const trimmedSearch = searchInput.trim();
+                    
+                    // Stop any existing scraper first
+                    stopScraping();
+                    
+                    // FIRST: Load existing CSV immediately (if it exists)
+                    console.log(`Loading existing data for: ${trimmedSearch}`);
+                    const existingListings = await checkAndCreateSearchCSV(trimmedSearch);
+                    setSearchListings(existingListings);
+                    console.log(`Loaded ${existingListings.length} existing listings`);
+                    
+                    // THEN: Start scraping in background
+                    console.log(`Starting background scraper for: ${trimmedSearch}`);
+                    setIsScraperRunning(true);
+                    
+                    // Set up polling to load results in real-time
+                    pollIntervalRef.current = setInterval(async () => {
+                      try {
+                        const response = await fetch(`/${trimmedSearch}.csv`);
+                        if (response.ok) {
+                          const csvText = await response.text();
+                          const listings = parseCSVData(csvText);
+                          console.log(`Polling: Loaded ${listings.length} listings so far...`);
+                          setSearchListings(listings);
+                        }
+                      } catch (error) {
+                        console.error('Error polling for results:', error);
+                      }
+                    }, 2000); // Poll every 2 seconds
+                    
+                    // Start scraper in background (non-blocking)
+                    scraperAbortControllerRef.current = new AbortController();
+                    
+                    try {
+                      const scrapeResponse = await fetch('/api/scrape', {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                          searchTerm: trimmedSearch
+                        }),
+                        signal: scraperAbortControllerRef.current.signal
+                      });
+                      
+                      const scrapeResult = await scrapeResponse.json();
+                      console.log('Scraper response:', scrapeResult);
+                      
+                      if (scrapeResponse.ok) {
+                        console.log(`Successfully scraped data for: ${trimmedSearch}`);
+                        
+                        // Load the final scraped data
+                        const response = await fetch(`/${trimmedSearch}.csv`);
+                        const csvText = await response.text();
+                        const listings = parseCSVData(csvText);
+                        setSearchListings(listings);
+                      } else {
+                        console.error('Scraper failed:', scrapeResult.error);
+                      }
+                    } catch (error: any) {
+                      if (error.name === 'AbortError') {
+                        console.log('Scraper aborted by user');
+                      } else {
+                        console.error('Error triggering scraper:', error);
+                      }
+                    } finally {
+                      stopScraping();
+                    }
                   } else {
                     setSearchListings([]);
                   }
@@ -624,6 +716,7 @@ const SwipeMode: React.FC<SwipeModeProps> = ({ onAddToWatchlist, watchlist }) =>
             {searchQuery && (
               <button
                 onClick={() => {
+                  stopScraping(); // Stop scraping when clearing search
                   setSearchQuery('');
                   setSearchInput('');
                   setSearchListings([]);
@@ -640,113 +733,13 @@ const SwipeMode: React.FC<SwipeModeProps> = ({ onAddToWatchlist, watchlist }) =>
               Showing results for: "{searchQuery}"
             </p>
           )}
+          {isScraperRunning && (
+            <div className="flex items-center gap-2 mt-2 text-rose-600">
+              <LoadingSpinner />
+              <p className="text-sm font-medium">Scraping Kijiji for fresh listings...</p>
+            </div>
+          )}
         </div>
-        
-        {/* Filter Toggle Button */}
-        <button
-          onClick={() => setFilters(prev => ({ ...prev, showFilters: !prev.showFilters }))}
-          className="flex items-center gap-2 px-4 py-2 bg-rose-100 text-rose-700 rounded-lg hover:bg-rose-200 transition-colors"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-          </svg>
-          Filters
-        </button>
-        
-        {/* Filter Panel */}
-        {filters.showFilters && (
-          <div className="w-full max-w-xl bg-white rounded-lg shadow-md p-4 border border-gray-200">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Price Range */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Price Range</label>
-                <div className="flex gap-2">
-                  <input
-                    type="number"
-                    placeholder="Min $"
-                    value={filters.minPrice}
-                    onChange={(e) => setFilters(prev => ({ ...prev, minPrice: e.target.value }))}
-                    onKeyDown={(e) => {
-                      // Allow: backspace, delete, tab, escape, enter, decimal point
-                      if ([8, 9, 27, 13, 46, 110, 190].indexOf(e.keyCode) !== -1 ||
-                          // Allow: Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
-                          (e.keyCode === 65 && e.ctrlKey === true) ||
-                          (e.keyCode === 67 && e.ctrlKey === true) ||
-                          (e.keyCode === 86 && e.ctrlKey === true) ||
-                          (e.keyCode === 88 && e.ctrlKey === true) ||
-                          // Allow: home, end, left, right, down, up
-                          (e.keyCode >= 35 && e.keyCode <= 40)) {
-                        return;
-                      }
-                      // Ensure that it is a number and stop the keypress
-                      if ((e.shiftKey || (e.keyCode < 48 || e.keyCode > 57)) && (e.keyCode < 96 || e.keyCode > 105)) {
-                        e.preventDefault();
-                      }
-                    }}
-                    className="w-full p-2 border border-gray-300 rounded-md text-sm focus:ring-rose-500 focus:border-rose-500"
-                  />
-                  <input
-                    type="number"
-                    placeholder="Max $"
-                    value={filters.maxPrice}
-                    onChange={(e) => setFilters(prev => ({ ...prev, maxPrice: e.target.value }))}
-                    onKeyDown={(e) => {
-                      // Allow: backspace, delete, tab, escape, enter, decimal point
-                      if ([8, 9, 27, 13, 46, 110, 190].indexOf(e.keyCode) !== -1 ||
-                          // Allow: Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
-                          (e.keyCode === 65 && e.ctrlKey === true) ||
-                          (e.keyCode === 67 && e.ctrlKey === true) ||
-                          (e.keyCode === 86 && e.ctrlKey === true) ||
-                          (e.keyCode === 88 && e.ctrlKey === true) ||
-                          // Allow: home, end, left, right, down, up
-                          (e.keyCode >= 35 && e.keyCode <= 40)) {
-                        return;
-                      }
-                      // Ensure that it is a number and stop the keypress
-                      if ((e.shiftKey || (e.keyCode < 48 || e.keyCode > 57)) && (e.keyCode < 96 || e.keyCode > 105)) {
-                        e.preventDefault();
-                      }
-                    }}
-                    className="w-full p-2 border border-gray-300 rounded-md text-sm focus:ring-rose-500 focus:border-rose-500"
-                  />
-                </div>
-              </div>
-              
-              
-              {/* Condition */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Condition</label>
-                <select
-                  value={filters.condition}
-                  onChange={(e) => setFilters(prev => ({ ...prev, condition: e.target.value }))}
-                  className="w-full p-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="">Any condition</option>
-                  <option value="New">New</option>
-                  <option value="Used - Like New">Used - Like New</option>
-                  <option value="Used - Good">Used - Good</option>
-                  <option value="Used - Fair">Used - Fair</option>
-                  <option value="Used - Poor">Used - Poor</option>
-                </select>
-              </div>
-            </div>
-            
-            {/* Clear Filters Button */}
-            <div className="mt-4 flex justify-end">
-              <button
-                onClick={() => setFilters({
-                  maxPrice: '',
-                  minPrice: '',
-                  condition: '',
-                  showFilters: true
-                })}
-                className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 transition-colors"
-              >
-                Clear Filters
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
       {!showImageGallery && (

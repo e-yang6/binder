@@ -30,6 +30,14 @@ const ListingCard: React.FC<ListingCardProps> = ({
     return num.toLocaleString('en-US');
   };
 
+  // Format price display - replace N/A with "Please contact seller"
+  const formatPrice = (price: string) => {
+    if (price === 'N/A' || price.toLowerCase() === 'n/a') {
+      return 'Please contact seller';
+    }
+    return price;
+  };
+
   // Reset estimate when listing changes
   useEffect(() => {
     setAiPriceEstimate(null);
@@ -121,12 +129,12 @@ const ListingCard: React.FC<ListingCardProps> = ({
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium text-gray-600">Asking:</span>
               <span className="text-lg font-semibold text-gray-700">
-                {listing.price}
+                {formatPrice(listing.price)}
               </span>
             </div>
           </div>
         ) : (
-          <p className="text-2xl font-bold text-rose-600 mb-2">{listing.price}</p>
+          <p className="text-2xl font-bold text-rose-600 mb-2">{formatPrice(listing.price)}</p>
         )}
         <p className="text-xs text-gray-500">Posted: {postedDate}</p>
 
