@@ -9,6 +9,7 @@ interface ListingCardProps {
   dragOffset?: number; // New prop for swipe animation
   isDragging?: boolean; // New prop for swipe animation
   onImageClick?: (listing: Listing) => void; // New prop for image gallery
+  revealProgress?: number; // 0 to 1, controls description reveal animation
 }
 
 const ListingCard: React.FC<ListingCardProps> = ({
@@ -18,6 +19,7 @@ const ListingCard: React.FC<ListingCardProps> = ({
   dragOffset = 0,
   isDragging = false,
   onImageClick,
+  revealProgress = 0,
 }) => {
   const postedDate = new Date(listing.posted_at).toLocaleDateString();
   const [aiPriceEstimate, setAiPriceEstimate] = useState<number | null>(null);
@@ -91,7 +93,7 @@ const ListingCard: React.FC<ListingCardProps> = ({
               handlePriceEstimate();
             }}
             disabled={isEstimatingPrice}
-            className="flex-shrink-0 px-3 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg hover:from-blue-600 hover:to-indigo-700 disabled:from-gray-400 disabled:to-gray-500 transition-all duration-200 text-sm font-medium shadow-sm"
+            className="flex-shrink-0 px-3 py-2 bg-gradient-to-r from-rose-400 to-pink-500 text-white rounded-lg hover:from-rose-500 hover:to-pink-600 disabled:from-gray-400 disabled:to-gray-500 transition-all duration-200 text-sm font-medium shadow-sm"
             title="Get Gemini Price Estimate"
           >
             {isEstimatingPrice ? (
@@ -102,7 +104,7 @@ const ListingCard: React.FC<ListingCardProps> = ({
                 <span>Analyzing...</span>
               </div>
             ) : (
-              <span>Gemini Fair Price Check</span>
+              <span>Fair Price Check</span>
             )}
           </button>
         </div>
@@ -111,8 +113,8 @@ const ListingCard: React.FC<ListingCardProps> = ({
         {aiPriceEstimate !== null ? (
           <div className="mb-2 space-y-1">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-gray-600">Gemini Estimate:</span>
-              <span className="text-xl font-bold text-blue-600">
+              <span className="text-sm font-medium text-gray-600">Estimated Fair Price:</span>
+              <span className="text-xl font-bold text-rose-600">
                 ${formatNumber(Math.round(aiPriceEstimate))}
               </span>
             </div>
@@ -124,49 +126,32 @@ const ListingCard: React.FC<ListingCardProps> = ({
             </div>
           </div>
         ) : (
-          <p className="text-2xl font-bold text-blue-600 mb-2">{listing.price}</p>
+          <p className="text-2xl font-bold text-rose-600 mb-2">{listing.price}</p>
         )}
         <p className="text-xs text-gray-500">Posted: {postedDate}</p>
 
-        {/* Expanded Details - Always show relevant info when expanded */}
-        {expanded && (
-          <div className="mt-4 border-t pt-4">
-            {/* Always display description when expanded */}
-            {listing.description && (
-              <div className="mb-4">
-                <h4 className="text-sm font-semibold text-gray-800 mb-2">Description</h4>
-                <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
-                  {listing.description}
-                </p>
-              </div>
-            )}
+        {/* Expanded Details - Always present but smoothly reveal based on revealProgress */}
+        <div 
+          className="border-t overflow-hidden transition-all duration-500 ease-in-out"
+          style={{
+            maxHeight: revealProgress > 0 ? `${revealProgress * 600}px` : '0px',
+            marginTop: revealProgress > 0 ? '1rem' : '0',
+            paddingTop: revealProgress > 0 ? '1rem' : '0',
+            opacity: revealProgress,
+          }}
+        >
+          {listing.description && (
+            <div className="mb-4">
+              <h4 className="text-sm font-semibold text-gray-800 mb-2">Description</h4>
+              <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+                {listing.description}
+              </p>
+            </div>
+          )}
             
             {/* AI Response details */}
             {aiResponse && (
               <>
-                {/* Always display description, seller_name, posted_at if after_right_swipe indicates them */}
-                {aiResponse.after_right_swipe?.extra_fields.includes(
-                  "description"
-                ) &&
-                  listing.description && (
-                    <p className="text-sm text-gray-700 mb-3">
-                      {listing.description}
-                    </p>
-                  )}
-            {aiResponse.after_right_swipe?.extra_fields.includes(
-              "seller_name"
-            ) && (
-              <p className="text-sm text-gray-700 mb-1">
-                Seller: {listing.seller_name}
-              </p>
-            )}
-            {aiResponse.after_right_swipe?.extra_fields.includes(
-              "posted_at"
-            ) && (
-              <p className="text-sm text-gray-700 mb-3">
-                Original Post Date: {postedDate}
-              </p>
-            )}
 
             {/* Always display follow-up questions if available */}
             {aiResponse.after_right_swipe?.follow_up_questions.length > 0 && (
@@ -211,8 +196,7 @@ const ListingCard: React.FC<ListingCardProps> = ({
             )}
               </>
             )}
-          </div>
-        )}
+        </div>
       </div>
     </div>
   );

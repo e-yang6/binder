@@ -618,7 +618,7 @@ const SwipeMode: React.FC<SwipeModeProps> = ({ onAddToWatchlist, watchlist }) =>
                 }
               }}
               placeholder="e.g., Mountain Bike, Coffee Table"
-              className="flex-1 p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+              className="flex-1 p-2 border border-gray-300 rounded-md shadow-sm focus:ring-rose-500 focus:border-rose-500 text-gray-900 bg-white"
               aria-label="Search products"
             />
             {searchQuery && (
@@ -645,7 +645,7 @@ const SwipeMode: React.FC<SwipeModeProps> = ({ onAddToWatchlist, watchlist }) =>
         {/* Filter Toggle Button */}
         <button
           onClick={() => setFilters(prev => ({ ...prev, showFilters: !prev.showFilters }))}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-rose-100 text-rose-700 rounded-lg hover:bg-rose-200 transition-colors"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
@@ -683,7 +683,7 @@ const SwipeMode: React.FC<SwipeModeProps> = ({ onAddToWatchlist, watchlist }) =>
                         e.preventDefault();
                       }
                     }}
-                    className="w-full p-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full p-2 border border-gray-300 rounded-md text-sm focus:ring-rose-500 focus:border-rose-500"
                   />
                   <input
                     type="number"
@@ -707,7 +707,7 @@ const SwipeMode: React.FC<SwipeModeProps> = ({ onAddToWatchlist, watchlist }) =>
                         e.preventDefault();
                       }
                     }}
-                    className="w-full p-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full p-2 border border-gray-300 rounded-md text-sm focus:ring-rose-500 focus:border-rose-500"
                   />
                 </div>
               </div>
@@ -752,54 +752,46 @@ const SwipeMode: React.FC<SwipeModeProps> = ({ onAddToWatchlist, watchlist }) =>
       {!showImageGallery && (
         currentListing ? (
           <>
-            <div
-              ref={cardRef}
-              className={`relative w-full max-w-xl mx-auto mb-8 
-                          ${isAiProcessing ? 'cursor-not-allowed pointer-events-none' : 'cursor-grab active:cursor-grabbing'}`}
-              onMouseDown={handleMouseDown}
-              onMouseMove={handleMouseMove}
-              onMouseUp={handleMouseUp}
-              onMouseLeave={handleMouseLeave}
-              onTouchStart={handleTouchStart}
-              onTouchMove={handleTouchMove}
-              onTouchEnd={handleTouchEnd}
-            >
-              <ListingCard
-                listing={currentListing}
-                expanded={showDescription}
-                aiResponse={aiResponse || undefined}
-                dragOffset={dragOffset}
-                isDragging={isDragging}
-                onImageClick={undefined}
-              />
-              {isAiProcessing && (
-                <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center rounded-lg z-20">
-                  <LoadingSpinner />
-                </div>
-              )}
-              {/* Visual feedback for horizontal swipe direction */}
+            <div className="relative w-full max-w-xl mx-auto mb-8">
+              {/* Visual feedback for horizontal swipe direction - Behind card */}
               {dragOffset > 50 && (
-                <div className="absolute inset-0 flex items-center justify-center bg-green-500/20 text-green-700 font-bold text-4xl rounded-lg pointer-events-none">
+                <div className="absolute inset-0 flex items-center justify-center bg-green-500/30 text-green-700 font-bold text-4xl rounded-lg pointer-events-none z-0">
                   SMASH
                 </div>
               )}
               {dragOffset < -50 && (
-                <div className="absolute inset-0 flex items-center justify-center bg-red-500/20 text-red-700 font-bold text-4xl rounded-lg pointer-events-none">
+                <div className="absolute inset-0 flex items-center justify-center bg-red-500/30 text-red-700 font-bold text-4xl rounded-lg pointer-events-none z-0">
                   PASS
                 </div>
               )}
               
-              {/* Visual feedback for vertical swipe direction */}
-              {isVerticalDragging && verticalDragOffset < -40 && (
-                <div className="absolute inset-0 flex items-center justify-center bg-blue-500/20 text-blue-700 font-bold text-3xl rounded-lg pointer-events-none">
-                  SHOW DETAILS
-                </div>
-              )}
-              {isVerticalDragging && verticalDragOffset > 40 && (
-                <div className="absolute inset-0 flex items-center justify-center bg-gray-500/20 text-gray-700 font-bold text-3xl rounded-lg pointer-events-none">
-                  HIDE DETAILS
-                </div>
-              )}
+              <div
+                ref={cardRef}
+                className={`relative z-10 
+                            ${isAiProcessing ? 'cursor-not-allowed pointer-events-none' : 'cursor-grab active:cursor-grabbing'}`}
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseLeave}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+              >
+                <ListingCard
+                  listing={currentListing}
+                  expanded={showDescription}
+                  aiResponse={aiResponse || undefined}
+                  dragOffset={dragOffset}
+                  isDragging={isDragging}
+                  onImageClick={undefined}
+                  revealProgress={Math.max(0, Math.min(1, (showDescription ? 1 : 0) + (-verticalDragOffset / 200)))}
+                />
+                {isAiProcessing && (
+                  <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center rounded-lg z-20">
+                    <LoadingSpinner />
+                  </div>
+                )}
+              </div>
             </div>
 
 

@@ -89,7 +89,7 @@ const Watchlist: React.FC<WatchlistProps> = ({ watchlist, onRemoveFromWatchlist 
               />
               <div className="p-4">
                 <h3 className="text-lg font-semibold text-gray-800 mb-2 line-clamp-2">{listing.title}</h3>
-                <p className="text-xl font-bold text-blue-600 mb-2">{listing.price}</p>
+                <p className="text-xl font-bold text-rose-600 mb-2">{listing.price}</p>
                 {listing.description && (
                   <p className="text-sm text-gray-700 line-clamp-3">{listing.description}</p>
                 )}
@@ -168,7 +168,7 @@ const Watchlist: React.FC<WatchlistProps> = ({ watchlist, onRemoveFromWatchlist 
                   {/* Title and Price */}
                   <div>
                     <h3 className="text-2xl font-bold text-gray-800 mb-2">{selectedItem.title}</h3>
-                    <p className="text-3xl font-bold text-blue-600 mb-4">{selectedItem.price}</p>
+                    <p className="text-3xl font-bold text-rose-600 mb-4">{selectedItem.price}</p>
                   </div>
 
                   {/* Key Details Grid */}

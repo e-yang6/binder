@@ -33,7 +33,7 @@ const App: React.FC = () => {
   return (
     <div className="h-screen bg-gray-100 flex flex-col">
       {/* Header/Logo Only */}
-      <header className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white py-3 px-4 shadow-md flex-shrink-0 z-10">
+      <header className="bg-gradient-to-r from-red-400 to-pink-500 text-white py-3 px-4 shadow-md flex-shrink-0 z-10">
         <nav className="flex justify-center items-center">
           <h1 className="text-2xl font-bold" style={{ fontFamily: 'Open Sauce One, sans-serif', transform: 'rotate(-5deg)' }}>binder.</h1>
         </nav>
@@ -51,18 +51,18 @@ const App: React.FC = () => {
           <button
             onClick={() => setActiveTab('swipe')}
             className={`flex flex-col items-center justify-center p-2 text-xs font-medium transition-colors duration-200 min-w-0
-              ${activeTab === 'swipe' ? 'text-blue-600' : 'text-gray-500'}`}
+              ${activeTab === 'swipe' ? 'text-rose-600' : 'text-gray-500'}`}
             aria-label="Browse"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0v-9a1 1 0 00-1-1H9a1 1 0 00-1 1v9m-6 0h16" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
             <span className="truncate">Browse</span>
           </button>
           <button
             onClick={() => setActiveTab('watchlist')}
             className={`flex flex-col items-center justify-center p-2 text-xs font-medium transition-all duration-200 min-w-0 relative
-              ${activeTab === 'watchlist' ? 'text-blue-600' : 'text-gray-500'}`}
+              ${activeTab === 'watchlist' ? 'text-rose-600' : 'text-gray-500'}`}
             aria-label="Watchlist"
           >
             <div className="relative">
