@@ -112,23 +112,6 @@ const MOCK_USER_PREFS: UserPrefs = {
 
 const service = new UnifiedMarketplaceService();
 
-// Utility function to calculate distance (simplified - in real app would use actual coordinates)
-const calculateDistance = (userLocation: string, listingLocation: string): number => {
-  // Simplified distance calculation based on location names
-  // In a real app, you'd use actual coordinates and calculate real distance
-  const userArea = userLocation.toLowerCase();
-  const listingArea = listingLocation.toLowerCase();
-  
-  if (userArea === listingArea) return 0;
-  if (userArea.includes('downtown') && listingArea.includes('downtown')) return 1;
-  if (userArea.includes('northside') && listingArea.includes('northside')) return 1;
-  if (userArea.includes('eastwood') && listingArea.includes('eastwood')) return 1;
-  if (userArea.includes('westend') && listingArea.includes('westend')) return 1;
-  if (userArea.includes('southwood') && listingArea.includes('southwood')) return 1;
-  
-  // Different areas - estimate distance
-  return Math.floor(Math.random() * 20) + 5; // 5-25 miles
-};
 
 interface SwipeModeProps {
   onStartConversation: (listing: Listing) => void;
@@ -149,7 +132,6 @@ const SwipeMode: React.FC<SwipeModeProps> = ({ onStartConversation, onAddToWatch
   const [filters, setFilters] = useState({
     maxPrice: '',
     minPrice: '',
-    maxDistance: '',
     quality: '',
     showFilters: false
   });
@@ -191,11 +173,6 @@ const SwipeMode: React.FC<SwipeModeProps> = ({ onStartConversation, onAddToWatch
       // Quality filter
       if (filters.quality && listing.quality !== filters.quality) return false;
       
-      // Distance filter
-      if (filters.maxDistance) {
-        const distance = calculateDistance(userLocation, listing.location);
-        if (distance > parseFloat(filters.maxDistance)) return false;
-      }
       
       return true;
     });
@@ -383,8 +360,8 @@ const SwipeMode: React.FC<SwipeModeProps> = ({ onStartConversation, onAddToWatch
         
         {/* Filter Panel */}
         {filters.showFilters && (
-          <div className="w-full max-w-2xl bg-white rounded-lg shadow-md p-4 border border-gray-200">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="w-full max-w-xl bg-white rounded-lg shadow-md p-4 border border-gray-200">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Price Range */}
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700">Price Range</label>
@@ -440,21 +417,6 @@ const SwipeMode: React.FC<SwipeModeProps> = ({ onStartConversation, onAddToWatch
                 </div>
               </div>
               
-              {/* Distance */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Max Distance</label>
-                <select
-                  value={filters.maxDistance}
-                  onChange={(e) => setFilters(prev => ({ ...prev, maxDistance: e.target.value }))}
-                  className="w-full p-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="">Any distance</option>
-                  <option value="5">Within 5 miles</option>
-                  <option value="10">Within 10 miles</option>
-                  <option value="20">Within 20 miles</option>
-                  <option value="50">Within 50 miles</option>
-                </select>
-              </div>
               
               {/* Quality */}
               <div className="space-y-2">
@@ -479,7 +441,6 @@ const SwipeMode: React.FC<SwipeModeProps> = ({ onStartConversation, onAddToWatch
                 onClick={() => setFilters({
                   maxPrice: '',
                   minPrice: '',
-                  maxDistance: '',
                   quality: '',
                   showFilters: true
                 })}

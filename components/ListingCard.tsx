@@ -28,7 +28,7 @@ const ListingCard: React.FC<ListingCardProps> = ({
   return (
     <div
       draggable="false"
-      className="relative bg-white rounded-lg shadow-lg overflow-hidden md:max-w-xl mx-auto cursor-grab active:cursor-grabbing"
+      className="relative bg-white rounded-lg shadow-lg overflow-hidden md:max-w-xl mx-auto cursor-grab active:cursor-grabbing select-none"
       style={cardStyle}
     >
       {/* Image and Basic Info */}

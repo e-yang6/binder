@@ -94,7 +94,7 @@ const App: React.FC = () => {
       {/* Header/Logo Only */}
       <header className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white py-3 px-4 shadow-md flex-shrink-0 z-10">
         <nav className="flex justify-center items-center">
-          <h1 className="text-2xl font-bold" style={{ fontFamily: 'Open Sauce One, sans-serif' }}>bindr.</h1>
+          <h1 className="text-2xl font-bold" style={{ fontFamily: 'Open Sauce One, sans-serif', transform: 'rotate(-5deg)' }}>bindr.</h1>
         </nav>
       </header>
 
