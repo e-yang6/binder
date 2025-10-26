@@ -16,7 +16,7 @@ export function csvApiPlugin() {
               const { filename, content } = JSON.parse(body);
               
               // Create search-results directory if it doesn't exist
-              const searchResultsDir = path.join(process.cwd(), 'search-results');
+              const searchResultsDir = path.join(process.cwd(), 'public');
               if (!fs.existsSync(searchResultsDir)) {
                 fs.mkdirSync(searchResultsDir, { recursive: true });
               }
