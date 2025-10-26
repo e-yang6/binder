@@ -22,6 +22,7 @@ export interface Listing {
   seller_name?: string;
   posted_at: string;
   notesFromSeller?: string;
+  listing_url?: string; // External URL for the listing
 }
 
 export type DealStyle = 'polite' | 'balanced' | 'aggressive';

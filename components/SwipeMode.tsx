@@ -29,6 +29,7 @@ const MOCK_LISTINGS: Listing[] = [
     // Additional fields for compatibility
     imgUrl: 'https://picsum.photos/400/300?random=1',
     condition: 'Used - Good',
+    quality: 'good',
     askingPrice: 150,
   },
   {
@@ -47,6 +48,7 @@ const MOCK_LISTINGS: Listing[] = [
     // Additional fields for compatibility
     imgUrl: 'https://picsum.photos/400/300?random=2',
     condition: 'Like New',
+    quality: 'like new',
     askingPrice: 75,
   },
   {
@@ -66,6 +68,7 @@ const MOCK_LISTINGS: Listing[] = [
     // Additional fields for compatibility
     imgUrl: 'https://picsum.photos/400/300?random=3',
     condition: 'Used - Fair',
+    quality: 'used',
     askingPrice: 250,
   },
   {
@@ -80,6 +83,7 @@ const MOCK_LISTINGS: Listing[] = [
     // Additional fields for compatibility
     imgUrl: 'https://picsum.photos/400/300?random=4',
     condition: 'Used - Good',
+    quality: 'good',
     askingPrice: 1200,
   },
   {
@@ -93,7 +97,8 @@ const MOCK_LISTINGS: Listing[] = [
     posted_at: '2024-07-16T16:00:00Z',
     // Additional fields for compatibility
     imgUrl: 'https://picsum.photos/400/300?random=5',
-    condition: 'Needs Repair',
+    condition: 'Used - Fair',
+    quality: 'poor',
     askingPrice: 20,
   },
 ];
@@ -122,6 +127,9 @@ const SwipeMode: React.FC<SwipeModeProps> = ({ onAddToWatchlist, watchlist }) =>
   const [aiResponse, setAiResponse] = useState<SwipeModeAIResponse | null>(null);
   const [isAiProcessing, setIsAiProcessing] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
+  const [showDescription, setShowDescription] = useState(false);
+  const [verticalDragOffset, setVerticalDragOffset] = useState(0);
+  const [isVerticalDragging, setIsVerticalDragging] = useState(false);
 
   // Function to parse CSV data with proper handling of quoted fields
   const parseCSVData = (csvText: string): Listing[] => {
@@ -156,7 +164,8 @@ const SwipeMode: React.FC<SwipeModeProps> = ({ onAddToWatchlist, watchlist }) =>
           description: values[3],
           image_url: values[4],
           listing_url: values[5],
-          condition: values[6] || 'Used - Good', // Use condition from CSV
+          condition: (values[6] || 'Used - Good') as 'Brand New' | 'Like New' | 'Used - Good' | 'Used - Fair' | 'Needs Repair', // Use condition from CSV
+          quality: 'good', // Default quality
           // Add required fields with defaults
           location: 'Downtown, Cityville', // Default location
           seller_name: 'Seller', // Default seller
@@ -210,8 +219,10 @@ const SwipeMode: React.FC<SwipeModeProps> = ({ onAddToWatchlist, watchlist }) =>
   const [dragOffset, setDragOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const startX = useRef(0);
+  const startY = useRef(0);
   const cardRef = useRef<HTMLDivElement>(null);
   const swipeThreshold = 100; // Pixels to register a swipe
+  const verticalSwipeThreshold = 50; // Pixels to register a vertical swipe
 
   // Effect to filter listings based on search query and filters
   useEffect(() => {
@@ -289,6 +300,7 @@ const SwipeMode: React.FC<SwipeModeProps> = ({ onAddToWatchlist, watchlist }) =>
     setShowImageGallery(false);
     setGalleryImages([]);
     setCurrentGalleryImageIndex(0);
+    setShowDescription(false); // Reset description state
   }, [currentListingIndex, filteredListings]);
 
   // Effect to process current listing for AI whenever currentListing or userPrefs change
@@ -327,25 +339,56 @@ const SwipeMode: React.FC<SwipeModeProps> = ({ onAddToWatchlist, watchlist }) =>
   }, []);
 
   // Swipe gesture handlers
-  const handleGestureStart = useCallback((clientX: number) => {
+  const handleGestureStart = useCallback((clientX: number, clientY: number) => {
     setIsDragging(true);
     startX.current = clientX;
+    startY.current = clientY;
   }, []);
 
-  const handleGestureMove = useCallback((clientX: number) => {
+  const handleGestureMove = useCallback((clientX: number, clientY: number) => {
     if (!isDragging) return;
-    setDragOffset(clientX - startX.current);
+    const deltaX = clientX - startX.current;
+    const deltaY = clientY - startY.current;
+    
+    // Determine if this is primarily a horizontal or vertical swipe
+    if (Math.abs(deltaX) > Math.abs(deltaY)) {
+      // Horizontal swipe
+      setDragOffset(deltaX);
+      setVerticalDragOffset(0);
+      setIsVerticalDragging(false);
+    } else {
+      // Vertical swipe
+      setVerticalDragOffset(deltaY);
+      setDragOffset(0);
+      setIsVerticalDragging(true);
+    }
   }, [isDragging]);
 
   const handleGestureEnd = useCallback(() => {
     setIsDragging(false);
     const finalDragOffset = dragOffset;
+    const finalVerticalDragOffset = verticalDragOffset;
     setDragOffset(0);
+    setVerticalDragOffset(0);
+    setIsVerticalDragging(false);
 
     if (isAiProcessing) {
       return;
     }
 
+    // Check for vertical swipes
+    if (isVerticalDragging) {
+      if (finalVerticalDragOffset < -verticalSwipeThreshold) {
+        // Swipe up - show description
+        setShowDescription(true);
+      } else if (finalVerticalDragOffset > verticalSwipeThreshold) {
+        // Swipe down - hide description
+        setShowDescription(false);
+      }
+      return;
+    }
+
+    // Check for horizontal swipes
     if (finalDragOffset > swipeThreshold) { // Right Swipe - Add to watchlist
       if (currentListing) {
         onAddToWatchlist(currentListing);
@@ -354,16 +397,16 @@ const SwipeMode: React.FC<SwipeModeProps> = ({ onAddToWatchlist, watchlist }) =>
     } else if (finalDragOffset < -swipeThreshold) { // Left Swipe
       moveToNextListing();
     }
-  }, [dragOffset, isAiProcessing, moveToNextListing, swipeThreshold, currentListing, onAddToWatchlist]);
+  }, [dragOffset, verticalDragOffset, isVerticalDragging, isAiProcessing, moveToNextListing, swipeThreshold, verticalSwipeThreshold, currentListing, onAddToWatchlist]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (isAiProcessing) { e.preventDefault(); e.stopPropagation(); return; }
-    handleGestureStart(e.clientX);
+    handleGestureStart(e.clientX, e.clientY);
   }, [handleGestureStart, isAiProcessing]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (isAiProcessing) { e.preventDefault(); e.stopPropagation(); return; }
-    handleGestureMove(e.clientX);
+    handleGestureMove(e.clientX, e.clientY);
   }, [handleGestureMove, isAiProcessing]);
 
   const handleMouseUp = useCallback(() => {
@@ -380,12 +423,12 @@ const SwipeMode: React.FC<SwipeModeProps> = ({ onAddToWatchlist, watchlist }) =>
 
   const handleTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
     if (isAiProcessing) { e.preventDefault(); e.stopPropagation(); return; }
-    handleGestureStart(e.touches[0].clientX);
+    handleGestureStart(e.touches[0].clientX, e.touches[0].clientY);
   }, [handleGestureStart, isAiProcessing]);
 
   const handleTouchMove = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
     if (isAiProcessing) { e.preventDefault(); e.stopPropagation(); return; }
-    handleGestureMove(e.touches[0].clientX);
+    handleGestureMove(e.touches[0].clientX, e.touches[0].clientY);
   }, [handleGestureMove, isAiProcessing]);
 
   const handleTouchEnd = useCallback(() => {
@@ -546,7 +589,7 @@ const SwipeMode: React.FC<SwipeModeProps> = ({ onAddToWatchlist, watchlist }) =>
             >
               <ListingCard
                 listing={currentListing}
-                expanded={false}
+                expanded={showDescription}
                 aiResponse={aiResponse || undefined}
                 dragOffset={dragOffset}
                 isDragging={isDragging}
@@ -557,7 +600,7 @@ const SwipeMode: React.FC<SwipeModeProps> = ({ onAddToWatchlist, watchlist }) =>
                   <LoadingSpinner />
                 </div>
               )}
-              {/* Visual feedback for swipe direction */}
+              {/* Visual feedback for horizontal swipe direction */}
               {dragOffset > 0 && (
                 <div className="absolute inset-0 flex items-center justify-center bg-green-500/20 text-green-700 font-bold text-4xl rounded-lg pointer-events-none">
                   SMASH
@@ -566,6 +609,18 @@ const SwipeMode: React.FC<SwipeModeProps> = ({ onAddToWatchlist, watchlist }) =>
               {dragOffset < 0 && (
                 <div className="absolute inset-0 flex items-center justify-center bg-red-500/20 text-red-700 font-bold text-4xl rounded-lg pointer-events-none">
                   PASS
+                </div>
+              )}
+              
+              {/* Visual feedback for vertical swipe direction */}
+              {isVerticalDragging && verticalDragOffset < -20 && (
+                <div className="absolute inset-0 flex items-center justify-center bg-blue-500/20 text-blue-700 font-bold text-3xl rounded-lg pointer-events-none">
+                  SHOW DETAILS
+                </div>
+              )}
+              {isVerticalDragging && verticalDragOffset > 20 && (
+                <div className="absolute inset-0 flex items-center justify-center bg-gray-500/20 text-gray-700 font-bold text-3xl rounded-lg pointer-events-none">
+                  HIDE DETAILS
                 </div>
               )}
             </div>
@@ -618,6 +673,7 @@ const SwipeMode: React.FC<SwipeModeProps> = ({ onAddToWatchlist, watchlist }) =>
           </div>
         </div>
       )}
+
     </div>
   );
 };

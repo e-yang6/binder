@@ -48,17 +48,30 @@ const ListingCard: React.FC<ListingCardProps> = ({
         <p className="text-xs text-gray-500">Posted: {postedDate}</p>
 
         {/* Expanded Details - Always show relevant info when expanded */}
-        {expanded && aiResponse && (
+        {expanded && (
           <div className="mt-4 border-t pt-4">
-            {/* Always display description, seller_name, posted_at if after_right_swipe indicates them */}
-            {aiResponse.after_right_swipe?.extra_fields.includes(
-              "description"
-            ) &&
-              listing.description && (
-                <p className="text-sm text-gray-700 mb-3">
+            {/* Always display description when expanded */}
+            {listing.description && (
+              <div className="mb-4">
+                <h4 className="text-sm font-semibold text-gray-800 mb-2">Description</h4>
+                <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
                   {listing.description}
                 </p>
-              )}
+              </div>
+            )}
+            
+            {/* AI Response details */}
+            {aiResponse && (
+              <>
+                {/* Always display description, seller_name, posted_at if after_right_swipe indicates them */}
+                {aiResponse.after_right_swipe?.extra_fields.includes(
+                  "description"
+                ) &&
+                  listing.description && (
+                    <p className="text-sm text-gray-700 mb-3">
+                      {listing.description}
+                    </p>
+                  )}
             {aiResponse.after_right_swipe?.extra_fields.includes(
               "seller_name"
             ) && (
@@ -114,6 +127,8 @@ const ListingCard: React.FC<ListingCardProps> = ({
                   ))}
                 </ul>
               </div>
+            )}
+              </>
             )}
           </div>
         )}
