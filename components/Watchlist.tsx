@@ -3,11 +3,10 @@ import { Listing } from '../types';
 
 interface WatchlistProps {
   watchlist: Listing[];
-  onStartConversation: (listing: Listing) => void;
   onRemoveFromWatchlist: (listingId: string) => void;
 }
 
-const Watchlist: React.FC<WatchlistProps> = ({ watchlist, onStartConversation, onRemoveFromWatchlist }) => {
+const Watchlist: React.FC<WatchlistProps> = ({ watchlist, onRemoveFromWatchlist }) => {
   const [selectedItem, setSelectedItem] = useState<Listing | null>(null);
   const [showImageZoom, setShowImageZoom] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -17,10 +16,6 @@ const Watchlist: React.FC<WatchlistProps> = ({ watchlist, onStartConversation, o
     setSelectedItem(listing);
   };
 
-  const handleAccept = (listing: Listing) => {
-    onStartConversation(listing);
-    setSelectedItem(null);
-  };
 
   const handleReject = () => {
     setSelectedItem(null);
@@ -95,14 +90,6 @@ const Watchlist: React.FC<WatchlistProps> = ({ watchlist, onStartConversation, o
               <div className="p-4">
                 <h3 className="text-lg font-semibold text-gray-800 mb-2 line-clamp-2">{listing.title}</h3>
                 <p className="text-xl font-bold text-blue-600 mb-2">{listing.price}</p>
-                <div className="flex items-center text-gray-600 text-sm mb-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  <span>{listing.location}</span>
-                </div>
-                <p className="text-sm text-gray-600 mb-2">Quality: <span className="font-medium text-gray-800 capitalize">{listing.quality}</span></p>
                 {listing.description && (
                   <p className="text-sm text-gray-700 line-clamp-3">{listing.description}</p>
                 )}
@@ -186,26 +173,6 @@ const Watchlist: React.FC<WatchlistProps> = ({ watchlist, onStartConversation, o
 
                   {/* Key Details Grid */}
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-gray-50 p-3 rounded-lg">
-                      <div className="flex items-center mb-1">
-                        <svg className="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                        <span className="text-sm font-medium text-gray-600">Location</span>
-                      </div>
-                      <p className="text-gray-800 font-medium">{selectedItem.location}</p>
-                    </div>
-
-                    <div className="bg-gray-50 p-3 rounded-lg">
-                      <div className="flex items-center mb-1">
-                        <svg className="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <span className="text-sm font-medium text-gray-600">Quality</span>
-                      </div>
-                      <p className="text-gray-800 font-medium capitalize">{selectedItem.quality}</p>
-                    </div>
 
                     <div className="bg-gray-50 p-3 rounded-lg">
                       <div className="flex items-center mb-1">
@@ -230,18 +197,6 @@ const Watchlist: React.FC<WatchlistProps> = ({ watchlist, onStartConversation, o
                     </div>
                   </div>
 
-                  {/* Seller Information */}
-                  {selectedItem.seller_name && (
-                    <div className="bg-blue-50 p-4 rounded-lg">
-                      <div className="flex items-center mb-2">
-                        <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                        </svg>
-                        <span className="font-medium text-blue-800">Seller</span>
-                      </div>
-                      <p className="text-blue-700 font-medium">{selectedItem.seller_name}</p>
-                    </div>
-                  )}
 
                   {/* Description */}
                   {selectedItem.description && (
@@ -251,26 +206,23 @@ const Watchlist: React.FC<WatchlistProps> = ({ watchlist, onStartConversation, o
                     </div>
                   )}
 
-                  {/* Notes from Seller */}
-                  {selectedItem.notesFromSeller && (
-                    <div className="bg-yellow-50 p-4 rounded-lg">
-                      <h4 className="text-sm font-semibold text-yellow-800 mb-2">Notes from Seller</h4>
-                      <p className="text-yellow-700">{selectedItem.notesFromSeller}</p>
-                    </div>
-                  )}
                 </div>
               </div>
 
               {/* Action Buttons */}
               <div className="mt-8 flex flex-col sm:flex-row gap-3">
                 <button
-                  onClick={() => handleAccept(selectedItem)}
+                  onClick={() => {
+                    if (selectedItem.listing_url) {
+                      window.open(selectedItem.listing_url, '_blank');
+                    }
+                  }}
                   className="flex-1 flex items-center justify-center px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors duration-200 font-medium"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                   </svg>
-                  Start Conversation
+                  View on Kijiji
                 </button>
                 <button
                   onClick={() => handleRemove(selectedItem.id)}

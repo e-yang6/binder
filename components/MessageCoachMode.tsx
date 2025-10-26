@@ -18,7 +18,6 @@ const MessageCoachMode: React.FC<MessageCoachModeProps> = ({ initialListing }) =
     price: '$120',
     location: 'Downtown',
     image_url: 'https://picsum.photos/id/10/200/200',
-    quality: 'good',
     posted_at: new Date().toISOString(),
     notesFromSeller: 'Great condition, used daily for 2 years'
   });

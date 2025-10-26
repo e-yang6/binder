@@ -23,7 +23,6 @@ const MOCK_LISTINGS: Listing[] = [
       'https://picsum.photos/400/300?random=12',
       'https://picsum.photos/400/300?random=13',
     ],
-    quality: 'good',
     description: 'A classic vintage leather armchair, well-maintained with minor wear. Perfect for a cozy reading nook.',
     seller_name: 'Sarah P.',
     posted_at: '2024-07-20T10:00:00Z',
@@ -42,7 +41,6 @@ const MOCK_LISTINGS: Listing[] = [
       'https://picsum.photos/400/300?random=21',
       'https://picsum.photos/400/300?random=22',
     ],
-    quality: 'like new',
     description: 'Sleek, minimalist design coffee table. No scratches or dents. Bought 3 months ago.',
     seller_name: 'John D.',
     posted_at: '2024-07-19T14:30:00Z',
@@ -62,7 +60,6 @@ const MOCK_LISTINGS: Listing[] = [
       'https://picsum.photos/400/300?random=32',
       'https://picsum.photos/400/300?random=33',
     ],
-    quality: 'used',
     description: '26-inch mountain bike, 21 gears. Rides well, needs new tires soon. Some rust on chain.',
     seller_name: 'Mike R.',
     posted_at: '2024-07-18T09:15:00Z',
@@ -77,7 +74,6 @@ const MOCK_LISTINGS: Listing[] = [
     price: '$1200',
     location: 'Westend, Cityville',
     image_url: 'https://picsum.photos/400/300?random=4',
-    quality: 'good',
     description: 'Working condition, beautiful ornate carvings. A true collector\'s item. Selling due to moving.',
     seller_name: 'Eleanor V.',
     posted_at: '2024-07-17T11:00:00Z',
@@ -92,7 +88,6 @@ const MOCK_LISTINGS: Listing[] = [
     price: '€20',
     location: 'Southwood, Cityville',
     image_url: 'https://picsum.photos/400/300?random=5',
-    quality: 'poor',
     description: 'Functional desk lamp, but has a cracked base. Bulb included.',
     seller_name: 'Chris L.',
     posted_at: '2024-07-16T16:00:00Z',
@@ -105,7 +100,6 @@ const MOCK_LISTINGS: Listing[] = [
 
 const MOCK_USER_PREFS: UserPrefs = {
   max_price: 300,
-  min_quality: 'good',
   preferred_locations: ['Downtown, Cityville', 'Northside, Cityville'],
   deal_style: 'balanced',
 };
@@ -114,25 +108,96 @@ const service = new UnifiedMarketplaceService();
 
 
 interface SwipeModeProps {
-  onStartConversation: (listing: Listing) => void;
   onAddToWatchlist: (listing: Listing) => void;
   watchlist: Listing[];
 }
 
-const SwipeMode: React.FC<SwipeModeProps> = ({ onStartConversation, onAddToWatchlist, watchlist }) => {
+const SwipeMode: React.FC<SwipeModeProps> = ({ onAddToWatchlist, watchlist }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [allListings, setAllListings] = useState<Listing[]>([]);
   const [filteredListings, setFilteredListings] = useState<Listing[]>([]);
   const [currentListingIndex, setCurrentListingIndex] = useState(0);
   const [currentListing, setCurrentListing] = useState<Listing | null>(null);
   const [userPrefs] = useState<UserPrefs>(MOCK_USER_PREFS);
   const [aiResponse, setAiResponse] = useState<SwipeModeAIResponse | null>(null);
   const [isAiProcessing, setIsAiProcessing] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Function to parse CSV data with proper handling of quoted fields
+  const parseCSVData = (csvText: string): Listing[] => {
+    const lines = csvText.trim().split('\n');
+    const listings: Listing[] = [];
+
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i];
+      const values: string[] = [];
+      let current = '';
+      let inQuotes = false;
+      
+      for (let j = 0; j < line.length; j++) {
+        const char = line[j];
+        if (char === '"') {
+          inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+          values.push(current.trim());
+          current = '';
+        } else {
+          current += char;
+        }
+      }
+      values.push(current.trim());
+      
+      if (values.length >= 7) {
+        console.log('Parsing values:', values);
+        const listing: Listing = {
+          id: values[0],
+          title: values[1],
+          price: values[2],
+          description: values[3],
+          image_url: values[4],
+          listing_url: values[5],
+          condition: values[6] || 'Used - Good', // Use condition from CSV
+          // Add required fields with defaults
+          location: 'Downtown, Cityville', // Default location
+          seller_name: 'Seller', // Default seller
+          posted_at: new Date().toISOString(),
+          // Additional fields for compatibility
+          imgUrl: values[4],
+          askingPrice: parseFloat(values[2].replace(/[^0-9.]/g, '')) || 0,
+        };
+        console.log('Created listing:', listing);
+        listings.push(listing);
+      }
+    }
+    return listings;
+  };
+
+  // Load CSV data on component mount
+  useEffect(() => {
+    const loadCSVData = async () => {
+      try {
+        const response = await fetch('/listings.csv');
+        const csvText = await response.text();
+        const listings = parseCSVData(csvText);
+        console.log('Parsed listings:', listings);
+        setAllListings(listings);
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error loading CSV data:', error);
+        // Fallback to mock data if CSV fails
+        setAllListings(MOCK_LISTINGS);
+        setIsLoading(false);
+      }
+    };
+
+    loadCSVData();
+  }, []);
 
   // Filter states
   const [filters, setFilters] = useState({
     maxPrice: '',
     minPrice: '',
-    quality: '',
+    condition: '',
     showFilters: false
   });
 
@@ -153,7 +218,7 @@ const SwipeMode: React.FC<SwipeModeProps> = ({ onStartConversation, onAddToWatch
     const lowerCaseQuery = searchQuery.toLowerCase();
     const userLocation = 'Downtown, Cityville'; // In real app, this would come from user profile
     
-    const newFilteredListings = MOCK_LISTINGS.filter(listing => {
+    const newFilteredListings = allListings.filter(listing => {
       // Exclude items already in watchlist
       const isInWatchlist = watchlist.some(watchlistItem => watchlistItem.id === listing.id);
       if (isInWatchlist) return false;
@@ -170,8 +235,8 @@ const SwipeMode: React.FC<SwipeModeProps> = ({ onStartConversation, onAddToWatch
       if (filters.minPrice && listingPrice && listingPrice.value < parseFloat(filters.minPrice)) return false;
       if (filters.maxPrice && listingPrice && listingPrice.value > parseFloat(filters.maxPrice)) return false;
       
-      // Quality filter
-      if (filters.quality && listing.quality !== filters.quality) return false;
+      // Condition filter
+      if (filters.condition && listing.condition !== filters.condition) return false;
       
       
       return true;
@@ -189,7 +254,7 @@ const SwipeMode: React.FC<SwipeModeProps> = ({ onStartConversation, onAddToWatch
       setAiResponse(null);
       setIsAiProcessing(false);
     }
-  }, [searchQuery, filters, watchlist]);
+  }, [searchQuery, filters, watchlist, allListings]);
 
   const processListingForAI = useCallback(async (listing: Listing, prefs: UserPrefs) => {
     setIsAiProcessing(true);
@@ -329,6 +394,16 @@ const SwipeMode: React.FC<SwipeModeProps> = ({ onStartConversation, onAddToWatch
   }, [handleGestureEnd, isAiProcessing]);
 
 
+  // Show loading state while CSV data is being loaded
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-full p-4 sm:p-6 lg:p-8 bg-gray-50">
+        <LoadingSpinner />
+        <p className="text-gray-600 mt-4">Loading listings...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col items-center justify-start min-h-full p-4 sm:p-6 lg:p-8 bg-gray-50 relative overflow-y-auto">
       <div className="w-full max-w-2xl mx-auto mb-6 flex flex-col items-center gap-4">
@@ -418,19 +493,20 @@ const SwipeMode: React.FC<SwipeModeProps> = ({ onStartConversation, onAddToWatch
               </div>
               
               
-              {/* Quality */}
+              {/* Condition */}
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Quality</label>
+                <label className="text-sm font-medium text-gray-700">Condition</label>
                 <select
-                  value={filters.quality}
-                  onChange={(e) => setFilters(prev => ({ ...prev, quality: e.target.value }))}
+                  value={filters.condition}
+                  onChange={(e) => setFilters(prev => ({ ...prev, condition: e.target.value }))}
                   className="w-full p-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
                 >
-                  <option value="">Any quality</option>
-                  <option value="like new">Like New</option>
-                  <option value="good">Good</option>
-                  <option value="used">Used</option>
-                  <option value="poor">Poor</option>
+                  <option value="">Any condition</option>
+                  <option value="New">New</option>
+                  <option value="Used - Like New">Used - Like New</option>
+                  <option value="Used - Good">Used - Good</option>
+                  <option value="Used - Fair">Used - Fair</option>
+                  <option value="Used - Poor">Used - Poor</option>
                 </select>
               </div>
             </div>
@@ -441,7 +517,7 @@ const SwipeMode: React.FC<SwipeModeProps> = ({ onStartConversation, onAddToWatch
                 onClick={() => setFilters({
                   maxPrice: '',
                   minPrice: '',
-                  quality: '',
+                  condition: '',
                   showFilters: true
                 })}
                 className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 transition-colors"

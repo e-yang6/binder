@@ -1,44 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import SwipeMode from './components/SwipeMode';
-import BindrChat from './components/BuynderChat';
 import Watchlist from './components/Watchlist';
-import { Listing, Conversation, Message } from './types';
+import { Listing } from './types';
 
-type ActiveTab = 'swipe' | 'watchlist' | 'messages';
+type ActiveTab = 'swipe' | 'watchlist';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<ActiveTab>('swipe');
-  const [selectedListingForMessages, setSelectedListingForMessages] = useState<Listing | null>(null);
   const [watchlist, setWatchlist] = useState<Listing[]>([]);
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [watchlistGlow, setWatchlistGlow] = useState(false);
 
-  const handleStartConversation = (listing: Listing) => {
-    // Check if conversation already exists for this listing
-    const existingConversation = conversations.find(conv => conv.listing.id === listing.id);
-    
-    if (existingConversation) {
-      // Switch to existing conversation
-      setActiveConversationId(existingConversation.id);
-      setSelectedListingForMessages(listing);
-    } else {
-      // Create new conversation
-      const newConversation: Conversation = {
-        id: `conv-${Date.now()}`,
-        listing: listing,
-        messages: [],
-        lastMessageAt: new Date().toISOString(),
-        isActive: true
-      };
-      
-      setConversations(prev => [...prev, newConversation]);
-      setActiveConversationId(newConversation.id);
-      setSelectedListingForMessages(listing);
-    }
-    
-    setActiveTab('messages');
-  };
 
   const handleAddToWatchlist = (listing: Listing) => {
     setWatchlist(prev => {
@@ -58,61 +29,20 @@ const App: React.FC = () => {
     setWatchlist(prev => prev.filter(item => item.id !== listingId));
   };
 
-  const handleUpdateConversation = (conversationId: string, messages: Message[]) => {
-    setConversations(prev => prev.map(conv => 
-      conv.id === conversationId 
-        ? { ...conv, messages, lastMessageAt: new Date().toISOString() }
-        : conv
-    ));
-  };
-
-  const handleSwitchConversation = (conversationId: string) => {
-    const conversation = conversations.find(conv => conv.id === conversationId);
-    if (conversation) {
-      setActiveConversationId(conversationId);
-      setSelectedListingForMessages(conversation.listing);
-      setActiveTab('messages');
-    }
-  };
-
-  const handleDeleteConversation = (conversationId: string) => {
-    setConversations(prev => prev.filter(conv => conv.id !== conversationId));
-    if (activeConversationId === conversationId) {
-      setActiveConversationId(null);
-      setSelectedListingForMessages(null);
-      if (conversations.length === 1) {
-        setActiveTab('swipe');
-      }
-    }
-  };
-
-  // Get current conversation
-  const currentConversation = conversations.find(conv => conv.id === activeConversationId);
 
   return (
     <div className="h-screen bg-gray-100 flex flex-col">
       {/* Header/Logo Only */}
       <header className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white py-3 px-4 shadow-md flex-shrink-0 z-10">
         <nav className="flex justify-center items-center">
-          <h1 className="text-2xl font-bold" style={{ fontFamily: 'Open Sauce One, sans-serif', transform: 'rotate(-5deg)' }}>bindr.</h1>
+          <h1 className="text-2xl font-bold" style={{ fontFamily: 'Open Sauce One, sans-serif', transform: 'rotate(-5deg)' }}>binder.</h1>
         </nav>
       </header>
 
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col overflow-y-auto">
-        {activeTab === 'swipe' && <SwipeMode onStartConversation={handleStartConversation} onAddToWatchlist={handleAddToWatchlist} watchlist={watchlist} />}
-        {activeTab === 'watchlist' && <Watchlist watchlist={watchlist} onStartConversation={handleStartConversation} onRemoveFromWatchlist={handleRemoveFromWatchlist} />}
-        {activeTab === 'messages' && (
-          <BindrChat 
-            key={activeConversationId || 'new-conversation'}
-            initialListing={selectedListingForMessages} 
-            conversation={currentConversation}
-            onUpdateConversation={handleUpdateConversation}
-            conversations={conversations}
-            onSwitchConversation={handleSwitchConversation}
-            onDeleteConversation={handleDeleteConversation}
-          />
-        )}
+        {activeTab === 'swipe' && <SwipeMode onAddToWatchlist={handleAddToWatchlist} watchlist={watchlist} />}
+        {activeTab === 'watchlist' && <Watchlist watchlist={watchlist} onRemoveFromWatchlist={handleRemoveFromWatchlist} />}
       </main>
 
       {/* Bottom Navigation Bar */}
@@ -142,17 +72,6 @@ const App: React.FC = () => {
               </svg>
             </div>
             <span className="truncate">Watchlist</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('messages')}
-            className={`flex flex-col items-center justify-center p-2 text-xs font-medium transition-colors duration-200 min-w-0
-              ${activeTab === 'messages' ? 'text-blue-600' : 'text-gray-500'}`}
-            aria-label="Chat"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-            </svg>
-            <span className="truncate">Chat</span>
           </button>
         </nav>
       </footer>

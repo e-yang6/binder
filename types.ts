@@ -101,17 +101,3 @@ export interface BuyerHelperResponse {
 }
 
 export type SellerResponse = string;
-
-// Conversation Management Types
-export interface Conversation {
-  id: string;
-  listing: Listing;
-  messages: Message[];
-  lastMessageAt: string;
-  isActive: boolean;
-}
-
-export interface ConversationState {
-  conversations: Conversation[];
-  activeConversationId: string | null;
-}

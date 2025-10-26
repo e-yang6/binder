@@ -45,35 +45,6 @@ const ListingCard: React.FC<ListingCardProps> = ({
           {listing.title}
         </h3>
         <p className="text-2xl font-bold text-blue-600 mb-2">{listing.price}</p>
-        <div className="flex items-center text-gray-600 text-sm mb-2">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-4 w-4 mr-1 text-gray-500"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M17.657 16.657L13.414 20.9a1.998 1 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-            />
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-            />
-          </svg>
-          <span>{listing.location}</span>
-        </div>
-        <p className="text-sm text-gray-600 mb-2">
-          Quality:{" "}
-          <span className="font-medium text-gray-800 capitalize">
-            {listing.quality}
-          </span>
-        </p>
         <p className="text-xs text-gray-500">Posted: {postedDate}</p>
 
         {/* Expanded Details - Always show relevant info when expanded */}
