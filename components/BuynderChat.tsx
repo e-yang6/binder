@@ -4,7 +4,7 @@ import { Listing, Message, BuyerHelperResponse, Conversation } from '../types';
 import { UnifiedMarketplaceService } from '../services/unifiedService';
 import { PaperclipIcon, SendIcon, GeminiIcon, LightbulbIcon } from './icons';
 
-interface BuynderChatProps {
+interface BindrChatProps {
   initialListing?: Listing | null;
   conversation?: Conversation | null;
   onUpdateConversation?: (conversationId: string, messages: Message[]) => void;
@@ -106,9 +106,9 @@ const SuggestionChip: React.FC<SuggestionChipProps> = ({ text, onClick }) => (
   </button>
 );
 
-// --- MAIN BUYNDER CHAT COMPONENT ---
+// --- MAIN BINDR CHAT COMPONENT ---
 
-const BuynderChat: React.FC<BuynderChatProps> = ({ 
+const BindrChat: React.FC<BindrChatProps> = ({ 
   initialListing, 
   conversation, 
   onUpdateConversation, 
@@ -530,4 +530,4 @@ const BuynderChat: React.FC<BuynderChatProps> = ({
   );
 };
 
-export default BuynderChat;
+export default BindrChat;

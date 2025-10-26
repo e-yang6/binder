@@ -1,4 +1,4 @@
-# Binder.
+# bindr.
 
 ## Features
 

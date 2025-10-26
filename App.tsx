@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import SwipeMode from './components/SwipeMode';
-import BuynderChat from './components/BuynderChat';
+import BindrChat from './components/BuynderChat';
 import Watchlist from './components/Watchlist';
 import { Listing, Conversation, Message } from './types';
 
@@ -94,7 +94,7 @@ const App: React.FC = () => {
       {/* Header/Logo Only */}
       <header className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white py-3 px-4 shadow-md flex-shrink-0 z-10">
         <nav className="flex justify-center items-center">
-          <h1 className="text-2xl font-bold" style={{ fontFamily: 'Open Sauce One, sans-serif' }}>Binder.</h1>
+          <h1 className="text-2xl font-bold" style={{ fontFamily: 'Open Sauce One, sans-serif' }}>bindr.</h1>
         </nav>
       </header>
 
@@ -103,7 +103,7 @@ const App: React.FC = () => {
         {activeTab === 'swipe' && <SwipeMode onStartConversation={handleStartConversation} onAddToWatchlist={handleAddToWatchlist} watchlist={watchlist} />}
         {activeTab === 'watchlist' && <Watchlist watchlist={watchlist} onStartConversation={handleStartConversation} onRemoveFromWatchlist={handleRemoveFromWatchlist} />}
         {activeTab === 'messages' && (
-          <BuynderChat 
+          <BindrChat 
             key={activeConversationId || 'new-conversation'}
             initialListing={selectedListingForMessages} 
             conversation={currentConversation}
