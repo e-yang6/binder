@@ -148,54 +148,6 @@ const ListingCard: React.FC<ListingCardProps> = ({
               </p>
             </div>
           )}
-            
-            {/* AI Response details */}
-            {aiResponse && (
-              <>
-
-            {/* Always display follow-up questions if available */}
-            {aiResponse.after_right_swipe?.follow_up_questions.length > 0 && (
-              <div className="mt-4">
-                <h5 className="text-md font-semibold text-gray-800 mb-2">
-                  Suggested Follow-up Questions:
-                </h5>
-                <ul className="list-disc list-inside text-sm text-gray-700 space-y-1">
-                  {aiResponse.after_right_swipe.follow_up_questions.map(
-                    (q, index) => (
-                      <li key={index}>{q}</li>
-                    )
-                  )}
-                </ul>
-              </div>
-            )}
-
-            {/* Risks and Notes - always show if available regardless of AI decision */}
-            {aiResponse.risks && aiResponse.risks.length > 0 && (
-              <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-                <h5 className="text-md font-semibold text-yellow-800 mb-1">
-                  Potential Risks:
-                </h5>
-                <ul className="list-disc list-inside text-sm text-yellow-700 space-y-1">
-                  {aiResponse.risks.map((risk, index) => (
-                    <li key={index}>{risk}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            {aiResponse.notes && aiResponse.notes.length > 0 && (
-              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-                <h5 className="text-md font-semibold text-blue-800 mb-1">
-                  Notes:
-                </h5>
-                <ul className="list-disc list-inside text-sm text-blue-700 space-y-1">
-                  {aiResponse.notes.map((note, index) => (
-                    <li key={index}>{note}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-              </>
-            )}
         </div>
       </div>
     </div>
