@@ -119,8 +119,11 @@ interface SwipeModeProps {
 
 const SwipeMode: React.FC<SwipeModeProps> = ({ onAddToWatchlist, watchlist }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchInput, setSearchInput] = useState('');
   const [allListings, setAllListings] = useState<Listing[]>([]);
   const [filteredListings, setFilteredListings] = useState<Listing[]>([]);
+  const [fypListings, setFypListings] = useState<Listing[]>([]);
+  const [searchListings, setSearchListings] = useState<Listing[]>([]);
   const [currentListingIndex, setCurrentListingIndex] = useState(0);
   const [currentListing, setCurrentListing] = useState<Listing | null>(null);
   const [userPrefs] = useState<UserPrefs>(MOCK_USER_PREFS);
@@ -181,6 +184,100 @@ const SwipeMode: React.FC<SwipeModeProps> = ({ onAddToWatchlist, watchlist }) =>
     return listings;
   };
 
+  const shuffleArray = <T,>(array: T[]): T[] => {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
+
+  const loadFYPData = async () => {
+    try {
+      const response = await fetch('/fyp.csv');
+      const csvText = await response.text();
+      const listings = parseCSVData(csvText);
+      // Shuffle FYP listings for random order
+      const shuffledListings = shuffleArray(listings);
+      setFypListings(shuffledListings);
+    } catch (error) {
+      console.error('Error loading FYP data:', error);
+    }
+  };
+
+  const checkAndCreateSearchCSV = useCallback(async (searchTerm: string) => {
+    try {
+      console.log(`[checkAndCreateSearchCSV] Starting check for: "${searchTerm}"`);
+      
+      // First, try to load existing CSV file
+      const checkResponse = await fetch(`/search-results/${searchTerm}.csv`);
+      console.log(`[checkAndCreateSearchCSV] Check response status: ${checkResponse.status}`);
+      console.log(`[checkAndCreateSearchCSV] Content-Type: ${checkResponse.headers.get('content-type')}`);
+      
+      // Check if it's actually a CSV file (not HTML fallback)
+      const contentType = checkResponse.headers.get('content-type');
+      const isCSV = contentType && (contentType.includes('text/csv') || contentType.includes('text/plain'));
+      
+      if (checkResponse.ok && isCSV) {
+        // CSV file already exists, load it
+        console.log(`CSV file already exists for: ${searchTerm}, loading data...`);
+        const csvText = await checkResponse.text();
+        const listings = parseCSVData(csvText);
+        console.log(`[checkAndCreateSearchCSV] Loaded ${listings.length} listings from existing CSV`);
+        return listings;
+      } else {
+        // CSV file doesn't exist, create it
+        console.log(`CSV file doesn't exist for: ${searchTerm}, creating new one...`);
+        const csvContent = `listing_id,title,price,description,image_url,listing_url,condition`;
+        
+        console.log(`[checkAndCreateSearchCSV] Sending POST request to /api/create-csv`);
+        console.log(`[checkAndCreateSearchCSV] Filename: ${searchTerm}.csv`);
+        
+        // Send request to create CSV file on server
+        const createResponse = await fetch('/api/create-csv', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            filename: `${searchTerm}.csv`,
+            content: csvContent
+          })
+        });
+        
+        console.log(`[checkAndCreateSearchCSV] Create response status: ${createResponse.status}`);
+        const responseData = await createResponse.json();
+        console.log(`[checkAndCreateSearchCSV] Create response data:`, responseData);
+        
+        if (createResponse.ok) {
+          console.log(`Created search CSV file: ${searchTerm}.csv in search-results folder`);
+        } else {
+          throw new Error(`Failed to create CSV file: ${responseData.error || 'Unknown error'}`);
+        }
+        
+        // Return empty array since it's a new file
+        return [];
+      }
+    } catch (error) {
+      console.error('[checkAndCreateSearchCSV] Error:', error);
+      return [];
+    }
+  }, []);
+
+  const listSearchCSVs = () => {
+    const searchCSVs: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('search_csv_')) {
+        const searchTerm = key.replace('search_csv_', '').replace(/_/g, ' ');
+        searchCSVs.push(searchTerm);
+      }
+    }
+    console.log('Available search CSV files:', searchCSVs);
+    return searchCSVs;
+  };
+
   // Load CSV data on component mount
   useEffect(() => {
     const loadCSVData = async () => {
@@ -201,6 +298,17 @@ const SwipeMode: React.FC<SwipeModeProps> = ({ onAddToWatchlist, watchlist }) =>
 
     loadCSVData();
   }, []);
+
+  // Check every 2 seconds if search is empty and load FYP data
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!searchQuery) {
+        loadFYPData();
+      }
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [searchQuery]);
 
   // Filter states
   const [filters, setFilters] = useState({
@@ -229,7 +337,10 @@ const SwipeMode: React.FC<SwipeModeProps> = ({ onAddToWatchlist, watchlist }) =>
     const lowerCaseQuery = searchQuery.toLowerCase();
     const userLocation = 'Downtown, Cityville'; // In real app, this would come from user profile
     
-    const newFilteredListings = allListings.filter(listing => {
+    // Use FYP data if search is empty, search-specific listings if search exists, otherwise all listings
+    const sourceListings = !searchQuery ? fypListings : (searchListings.length > 0 ? searchListings : allListings);
+    
+    const newFilteredListings = sourceListings.filter(listing => {
       // Exclude items already in watchlist
       const isInWatchlist = watchlist.some(watchlistItem => watchlistItem.id === listing.id);
       if (isInWatchlist) return false;
@@ -255,17 +366,31 @@ const SwipeMode: React.FC<SwipeModeProps> = ({ onAddToWatchlist, watchlist }) =>
     
     setFilteredListings(newFilteredListings);
 
-    // Reset index and current listing when filters change
+    // Only reset current listing if it's truly changed (not just a data refresh)
     if (newFilteredListings.length > 0) {
-      setCurrentListingIndex(0);
-      setCurrentListing(newFilteredListings[0]);
+      // Check if current listing still exists in the new filtered list
+      if (currentListing) {
+        const currentIndex = newFilteredListings.findIndex(listing => listing.id === currentListing.id);
+        if (currentIndex !== -1) {
+          // Current listing still exists, just update the index if needed
+          setCurrentListingIndex(currentIndex);
+        } else {
+          // Current listing no longer in filtered list, go to first item
+          setCurrentListingIndex(0);
+          setCurrentListing(newFilteredListings[0]);
+        }
+      } else {
+        // No current listing, go to first item
+        setCurrentListingIndex(0);
+        setCurrentListing(newFilteredListings[0]);
+      }
     } else {
       setCurrentListingIndex(0);
       setCurrentListing(null);
       setAiResponse(null);
       setIsAiProcessing(false);
     }
-  }, [searchQuery, filters, watchlist, allListings]);
+  }, [searchQuery, filters, watchlist, allListings, fypListings, searchListings, currentListing]);
 
   const processListingForAI = useCallback(async (listing: Listing, prefs: UserPrefs) => {
     setIsAiProcessing(true);
@@ -294,13 +419,34 @@ const SwipeMode: React.FC<SwipeModeProps> = ({ onAddToWatchlist, watchlist }) =>
   const moveToNextListing = useCallback(() => {
     if (filteredListings.length === 0) return;
 
-    const nextIndex = (currentListingIndex + 1) % filteredListings.length;
+    const nextIndex = currentListingIndex + 1;
+    if (nextIndex >= filteredListings.length) {
+      // No more items, reset to empty state
+      setCurrentListingIndex(0);
+      setCurrentListing(null);
+      setShowImageGallery(false);
+      setGalleryImages([]);
+      setCurrentGalleryImageIndex(0);
+      setShowDescription(false);
+      setDragOffset(0);
+      setVerticalDragOffset(0);
+      setIsVerticalDragging(false);
+      setAiResponse(null);
+      setIsAiProcessing(false);
+      return;
+    }
+
     setCurrentListingIndex(nextIndex);
     setCurrentListing(filteredListings[nextIndex]);
     setShowImageGallery(false);
     setGalleryImages([]);
     setCurrentGalleryImageIndex(0);
-    setShowDescription(false); // Reset description state
+    setShowDescription(false);
+    setDragOffset(0);
+    setVerticalDragOffset(0);
+    setIsVerticalDragging(false);
+    setAiResponse(null);
+    setIsAiProcessing(false);
   }, [currentListingIndex, filteredListings]);
 
   // Effect to process current listing for AI whenever currentListing or userPrefs change
@@ -454,15 +600,46 @@ const SwipeMode: React.FC<SwipeModeProps> = ({ onAddToWatchlist, watchlist }) =>
           <label htmlFor="searchProductInput" className="text-gray-700 text-lg font-semibold mb-2">
             Search Products:
           </label>
-          <input
-            id="searchProductInput"
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="e.g., Mountain Bike, Coffee Table"
-            className="block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
-            aria-label="Search products"
-          />
+          <div className="flex w-full gap-2">
+            <input
+              id="searchProductInput"
+              type="text"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onKeyDown={async (e) => {
+                if (e.key === 'Enter') {
+                  setSearchQuery(searchInput);
+                  if (searchInput.trim()) {
+                    const listings = await checkAndCreateSearchCSV(searchInput.trim());
+                    setSearchListings(listings);
+                  } else {
+                    setSearchListings([]);
+                  }
+                }
+              }}
+              placeholder="e.g., Mountain Bike, Coffee Table"
+              className="flex-1 p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+              aria-label="Search products"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => {
+                  setSearchQuery('');
+                  setSearchInput('');
+                  setSearchListings([]);
+                }}
+                className="px-3 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors"
+                title="Clear search"
+              >
+                ×
+              </button>
+            )}
+          </div>
+          {searchQuery && (
+            <p className="text-sm text-gray-600 mt-1">
+              Showing results for: "{searchQuery}"
+            </p>
+          )}
         </div>
         
         {/* Filter Toggle Button */}
