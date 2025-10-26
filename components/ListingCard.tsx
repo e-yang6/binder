@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Listing, SwipeModeAIResponse } from "../types";
+import { estimateFairPrice } from "../services/priceEstimationService";
 
 interface ListingCardProps {
   listing: Listing;
@@ -19,6 +20,44 @@ const ListingCard: React.FC<ListingCardProps> = ({
   onImageClick,
 }) => {
   const postedDate = new Date(listing.posted_at).toLocaleDateString();
+  const [aiPriceEstimate, setAiPriceEstimate] = useState<number | null>(null);
+  const [isEstimatingPrice, setIsEstimatingPrice] = useState(false);
+
+  // Format number with commas
+  const formatNumber = (num: number) => {
+    return num.toLocaleString('en-US');
+  };
+
+  // Reset estimate when listing changes
+  useEffect(() => {
+    setAiPriceEstimate(null);
+    setIsEstimatingPrice(false);
+  }, [listing.id]);
+
+  const handlePriceEstimate = async () => {
+    console.log('Button clicked, starting price estimation...');
+    setIsEstimatingPrice(true);
+    
+    console.log('Calling estimateFairPrice with:', {
+      title: listing.title,
+      description: listing.description || '',
+      condition: listing.condition,
+      currentPrice: listing.price,
+      category: 'General',
+    });
+    
+    const estimate = await estimateFairPrice({
+      title: listing.title,
+      description: listing.description || '',
+      condition: listing.condition,
+      currentPrice: listing.price,
+      category: 'General',
+    });
+    
+    console.log('Got estimate:', estimate);
+    setAiPriceEstimate(estimate.estimatedPrice);
+    setIsEstimatingPrice(false);
+  };
 
   const cardStyle: React.CSSProperties = {
     transform: `translateX(${dragOffset}px) rotate(${dragOffset * 0.05}deg)`, // Rotate proportionally to drag
@@ -41,10 +80,52 @@ const ListingCard: React.FC<ListingCardProps> = ({
         onClick={() => onImageClick && expanded && onImageClick(listing)} // Only clickable if onImageClick is provided and card is expanded
       />
       <div className="p-4">
-        <h3 className="text-xl font-semibold text-gray-800 mb-1">
-          {listing.title}
-        </h3>
-        <p className="text-2xl font-bold text-blue-600 mb-2">{listing.price}</p>
+        <div className="flex items-start justify-between mb-1">
+          <h3 className="text-xl font-semibold text-gray-800 flex-1 mr-3">
+            {listing.title}
+          </h3>
+          <button
+            onClick={(e) => {
+              console.log('Button clicked!');
+              e.stopPropagation();
+              handlePriceEstimate();
+            }}
+            disabled={isEstimatingPrice}
+            className="flex-shrink-0 px-3 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg hover:from-blue-600 hover:to-indigo-700 disabled:from-gray-400 disabled:to-gray-500 transition-all duration-200 text-sm font-medium shadow-sm"
+            title="Get Gemini Price Estimate"
+          >
+            {isEstimatingPrice ? (
+              <div className="flex items-center gap-2">
+                <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <span>Analyzing...</span>
+              </div>
+            ) : (
+              <span>Gemini Fair Price Check</span>
+            )}
+          </button>
+        </div>
+        
+        {/* Gemini Price Estimate Display */}
+        {aiPriceEstimate !== null ? (
+          <div className="mb-2 space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-gray-600">Gemini Estimate:</span>
+              <span className="text-xl font-bold text-blue-600">
+                ${formatNumber(Math.round(aiPriceEstimate))}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-gray-600">Asking:</span>
+              <span className="text-lg font-semibold text-gray-700">
+                {listing.price}
+              </span>
+            </div>
+          </div>
+        ) : (
+          <p className="text-2xl font-bold text-blue-600 mb-2">{listing.price}</p>
+        )}
         <p className="text-xs text-gray-500">Posted: {postedDate}</p>
 
         {/* Expanded Details - Always show relevant info when expanded */}

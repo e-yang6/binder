@@ -221,8 +221,8 @@ const SwipeMode: React.FC<SwipeModeProps> = ({ onAddToWatchlist, watchlist }) =>
   const startX = useRef(0);
   const startY = useRef(0);
   const cardRef = useRef<HTMLDivElement>(null);
-  const swipeThreshold = 100; // Pixels to register a swipe
-  const verticalSwipeThreshold = 50; // Pixels to register a vertical swipe
+  const swipeThreshold = 150; // Pixels to register a swipe
+  const verticalSwipeThreshold = 80; // Pixels to register a vertical swipe
 
   // Effect to filter listings based on search query and filters
   useEffect(() => {
@@ -601,29 +601,30 @@ const SwipeMode: React.FC<SwipeModeProps> = ({ onAddToWatchlist, watchlist }) =>
                 </div>
               )}
               {/* Visual feedback for horizontal swipe direction */}
-              {dragOffset > 0 && (
+              {dragOffset > 50 && (
                 <div className="absolute inset-0 flex items-center justify-center bg-green-500/20 text-green-700 font-bold text-4xl rounded-lg pointer-events-none">
                   SMASH
                 </div>
               )}
-              {dragOffset < 0 && (
+              {dragOffset < -50 && (
                 <div className="absolute inset-0 flex items-center justify-center bg-red-500/20 text-red-700 font-bold text-4xl rounded-lg pointer-events-none">
                   PASS
                 </div>
               )}
               
               {/* Visual feedback for vertical swipe direction */}
-              {isVerticalDragging && verticalDragOffset < -20 && (
+              {isVerticalDragging && verticalDragOffset < -40 && (
                 <div className="absolute inset-0 flex items-center justify-center bg-blue-500/20 text-blue-700 font-bold text-3xl rounded-lg pointer-events-none">
                   SHOW DETAILS
                 </div>
               )}
-              {isVerticalDragging && verticalDragOffset > 20 && (
+              {isVerticalDragging && verticalDragOffset > 40 && (
                 <div className="absolute inset-0 flex items-center justify-center bg-gray-500/20 text-gray-700 font-bold text-3xl rounded-lg pointer-events-none">
                   HIDE DETAILS
                 </div>
               )}
             </div>
+
 
           </>
         ) : (
