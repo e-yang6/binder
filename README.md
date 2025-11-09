@@ -1,165 +1,83 @@
 # binder.
 
-> **Swipe. Save. Shop.** - A Tinder-style marketplace app that makes browsing Kijiji listings fun and effortless.
-
----
-
 ## Overview
 
-**Binder** transforms traditional marketplace browsing into an intuitive, swipe-based interface. Browse Toronto-area Kijiji listings with simple gestures, save your favorites, and discover deals in a fun, engaging way.
+binder. is a Tinder-inspired marketplace browser for Kijiji listings. It blends a swipe-first React experience with live scraping and lightweight AI helpers so you can discover, evaluate, and save deals without leaving the app. Search terms spin up the Python scraper in the background, fresh results stream in via CSV files, and a Gemini-powered price check helps you spot over-priced posts before reaching out to sellers.
 
----
+## Highlights
 
-## Key Features
+- Swipe through Kijiji inventory with card gestures, quick facts, and instant add-to-watchlist.
+- Run ad‑hoc searches that trigger the bundled Selenium scraper; results are polled every few seconds and cached as `{searchTerm}.csv`.
+- Tap **Fair Price Check** on any card to ask Google Gemini for a conservative market estimate (requires an API key).
+- Maintain a watchlist with detailed modals, image galleries, and one-click removal or jump-out to the original listing.
+- Custom Vite middleware exposes `/api/create-csv` and `/api/scrape`, keeping everything in one dev server.
 
-### Swipe Interface
-- **Swipe Right** to save items to your watchlist
-- **Swipe Left** to pass on items
-- **Swipe Up/Down** to reveal or hide full descriptions
-- Visual feedback and smooth animations
+## Stack
 
-### Smart Search
-- Search for any item (e.g., "laptop", "bike", "furniture")
-- Instant display of existing results
-- Automatic background scraping for fresh listings
-- Real-time updates as new items are found
+- **Frontend:** React 19, TypeScript, Tailwind CSS, Vite.
+- **AI & Services:** Google Gemini via `@google/generative-ai`, shared logic in `UnifiedMarketplaceService`.
+- **Scraping:** Python (Selenium, BeautifulSoup, Pandas) launched from the Vite plugin; listings persisted as CSV in `public/`.
 
-### Watchlist
-- Save items you're interested in with a single swipe
-- View detailed information and multiple photos
-- Easy management and removal of saved items
-- Persistent across sessions
-
-### Dynamic Feed
-- Randomized listing display on the main page
-- Auto-refreshes with new items
-- Filters out duplicates and already-saved items
-- Quality-checked listings only
-
----
-
-## Installation
+## Getting Started
 
 ### Prerequisites
-- Node.js (v18+)
-- Python (3.10+)
-- Chrome Browser
 
-### Setup
+- Node.js 18+ and npm.
+- Python 3.10+ with access to Chrome/Chromedriver (for the Selenium scraper).
+- A Google Gemini API key if you plan to use Fair Price Check.
 
-1. **Install frontend dependencies**
-```bash
-npm install
+### Install dependencies
+
+1. (Optional) If the `kijiji-scraper/` folder is empty, unzip `kijiji-scraper.zip` so the Python scripts are available.
+2. Install frontend packages:
+   ```bash
+   npm install
+   ```
+3. Install scraper dependencies:
+   ```bash
+   cd kijiji-scraper
+   pip install -r requirements.txt
+   cd ..
+   ```
+
+### Configure environment
+
+Create a `.env` file in the project root (same level as `package.json`) and supply your Gemini key:
+```
+VITE_GEMINI_API_KEY=YOUR_KEY_HERE
 ```
 
-2. **Install Python dependencies**
-```bash
-cd kijiji-scraper
-python setup.py
-```
+### Run the app
 
-3. **Start the app**
 ```bash
 npm run dev
 ```
 
-4. Open `http://localhost:5173` in your browser
+Open the Vite URL (default `http://localhost:5173`). Search for something (e.g. “mountain bike”) to kick off scraping; cards will update as the CSV fills. Use the browse/watchlist tabs in the footer to navigate.
 
----
+## How Data Flows
 
-## Usage
+1. `SwipeMode` loads `public/listings.csv` on start for the “For You” feed.
+2. Entering a search:
+   - Immediately loads `{search}.csv` if it already exists.
+   - POSTs to `/api/scrape`, which spawns `kijiji_scraper.py`.
+   - Every two seconds the UI polls `{search}.csv` for freshly scraped rows.
+3. Swiping right adds a listing to the watchlist; the list persists for the current session.
 
-### Searching
-1. Type a search term in the search box
-2. Press Enter
-3. Browse results as they load in real-time
+CSV files live under `public/`, so you can preseed data or inspect results directly from disk.
 
-### Browsing
-- Leave the search box empty to browse all listings
-- Swipe right on items you like
-- Swipe left to skip
+## Troubleshooting
 
-### Managing Watchlist
-- Click the "Watchlist" tab to view saved items
-- Click any item for full details
-- Remove items you're no longer interested in
+- **Scraper fails to start:** make sure Python deps are installed and Chromedriver is reachable; check terminal output where Vite is running.
+- **Fair Price Check disabled:** ensure `VITE_GEMINI_API_KEY` is set before starting the dev server.
+- **Stale results:** delete outdated CSVs in `public/` to force a fresh scrape.
 
-### Stopping a Scrape
-- Click the 'X' button next to the search box
-- Start a new search (automatically stops the current one)
-- Switch to the Watchlist tab
+## Scripts
 
----
+- `npm run dev` – start Vite with the CSV API middleware.
+- `npm run build` – production build.
+- `npm run preview` – preview the built app.
 
-## Configuration
-
-Adjust scraper settings in `kijiji-scraper/config.py`:
-
-```python
-SCRAPER_CONFIG = {
-    'headless': False,       # Show/hide browser window
-    'max_pages': 2,          # Pages to scrape per search
-    'max_listings': 10,      # Items per search
-}
-```
-
-Common adjustments:
-- Set `headless: True` for background scraping
-- Increase `max_listings` for more results
-- Adjust timeout values for faster/slower scraping
-
----
-
-## Project Structure
-
-```
-binder/
-├── components/          # React UI components
-├── services/            # Business logic
-├── kijiji-scraper/      # Python scraper
-│   ├── kijiji_scraper.py
-│   └── config.py
-├── public/              # Static files and CSV data
-├── App.tsx              # Main application
-└── vite-plugin-csv-api.js  # Backend API integration
-```
-
----
-
-## Features in Detail
-
-### Intelligent Scraping
-- Scrapes real Kijiji listings on demand
-- Runs in the background without blocking the UI
-- Automatically filters out errors and duplicates
-- Validates data quality before saving
-
-### Data Quality
-- Skips incomplete or error listings
-- Removes duplicate entries
-- Validates all required fields
-- Formats prices for readability
-
-### User Experience
-- Mobile-responsive design
-- Touch-optimized gestures
-- Smooth card animations
-- No page reloads needed
-
----
-
-## Use Cases
-
-**Apartment Hunting**
-Search for apartments, swipe through options, save favorites for comparison.
-
-**Finding Deals**
-Browse electronics, furniture, or vehicles with real-time market data.
-
-**Casual Discovery**
-Browse the randomized main feed to discover unexpected finds.
+Happy hunting!
 
 
----
-
-*Happy browsing!*
