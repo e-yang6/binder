@@ -1,5 +1,7 @@
 # binder.
 
+**🔗 Demo:** https://devpost.com/software/binder-us65t7
+
 ## Overview
 
 binder. is a Tinder-inspired marketplace browser for Kijiji listings. It blends a swipe-first React experience with live scraping and lightweight AI helpers so you can discover, evaluate, and save deals without leaving the app. Search terms spin up the Python scraper in the background, fresh results stream in via CSV files, and a Gemini-powered price check helps you spot over-priced posts before reaching out to sellers.
