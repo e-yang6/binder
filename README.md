@@ -2,9 +2,6 @@
 ** Swipe your way to the perfect marketplace deal  
 ** AI-powered negotiation assistant for smart shopping  
 
----
----
-
 Overview
 --------
 
@@ -13,9 +10,6 @@ Traditional marketplace apps are cluttered and negotiation can be awkward.
 That's why we built binder.: a Tinder-style marketplace browser with AI-powered negotiation coaching.
 
 binder. combines web scraping, AI reasoning, and an intuitive swipe interface to help you discover great deals and negotiate like a pro. Swipe through Kijiji listings, save items to your watchlist, and get AI-powered message suggestions to help you close the deal.
-
----
----
 
 
 Features
@@ -36,9 +30,6 @@ Technical Features
 - Background Processing: Non-blocking scraping with real-time CSV updates.  
 - Responsive Design: Works seamlessly on mobile and desktop.
 
----
----
-
 Architecture
 ------------
 
@@ -48,9 +39,6 @@ User Search → Kijiji Scraper → CSV Storage → AI Analysis → Swipe Interfa
 
 (Add a system diagram here, e.g., docs/images/system-diagram.png)
 
-
----
----
 
 Tech Stack
 -----------
@@ -64,9 +52,6 @@ Tech Stack
 | Build Tools | Vite with custom CSV API plugin |
 | State Management | React Hooks (useState, useEffect, useCallback) |
 
----
----
-
 How It Works
 ------------
 
@@ -75,9 +60,6 @@ How It Works
 3. Swipe Interface – Users swipe left (pass) or right (save) through listings with smooth animations.  
 4. Message Coaching – AI generates personalized message suggestions for negotiating with sellers.  
 5. Price Negotiation – Get counter-offer suggestions, safety tips, and negotiation tactics.  
-
----
----
 
 Data Sources
 ------------
@@ -89,9 +71,6 @@ Data Sources
   - `listings.csv` – Master feed (shuffled every 2 seconds)  
   - `fyp.csv` – Historical archive  
 
----
----
-
 Challenges Overcome
 -------------------
 
@@ -100,9 +79,6 @@ Challenges Overcome
 - Implemented swipe gestures with smooth animations.  
 - Created unified AI service combining recommendation and chat assistance.  
 - Optimized polling mechanism for efficient real-time updates.  
-
----
----
 
 Future Roadmap
 --------------
@@ -113,10 +89,7 @@ Future Roadmap
 - Advanced AI: Better price prediction using historical data.  
 - Database Migration: Replace CSV with SQLite/PostgreSQL for better performance.  
 - WebSocket Integration: Real-time updates without polling.  
-- Mobile App: Native iOS and Android applications.  
-
----
----
+- Mobile App: Native iOS and Android applications.
 
 Team
 ----
@@ -127,9 +100,6 @@ Team
 | Ryan Gao |
 | Jeremy Liu |
 | Ethan Yang |
-
----
----
 
 Links
 -----
