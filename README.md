@@ -1,6 +1,7 @@
 # binder.
 Swipe your way to the perfect marketplace deal  
-AI-powered negotiation assistant for smart shopping  
+AI-powered negotiation assistant for smart shopping 
+
 ---
 Overview
 --------
